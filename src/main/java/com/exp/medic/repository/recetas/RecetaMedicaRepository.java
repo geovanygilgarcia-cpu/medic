@@ -8,4 +8,7 @@ import java.util.List;
 public interface RecetaMedicaRepository extends JpaRepository<RecetaMedica, Long> {
 
     List<RecetaMedica> findByPacienteIdOrderByCreatedAtDesc(Long pacienteId);
+
+    void deleteByPacienteId(Long pacienteId);
+
 }

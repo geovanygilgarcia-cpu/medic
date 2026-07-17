@@ -8,4 +8,7 @@ import java.util.List;
 public interface HistoriaClinicaRepository extends JpaRepository<HistoriaClinica, Long> {
 
     List<HistoriaClinica> findByPacienteIdOrderByCreatedAtDesc(Long pacienteId);
+
+    void deleteByPacienteId(Long pacienteId);
+
 }

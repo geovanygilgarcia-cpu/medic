@@ -5,7 +5,9 @@ import com.exp.medic.dto.paciente.response.PacienteResponseDTO;
 import com.exp.medic.exception.RecursoNoEncontradoException;
 import com.exp.medic.helper.paciente.IPacienteHelper;
 import com.exp.medic.model.Paciente;
+import com.exp.medic.repository.historia.HistoriaClinicaRepository;
 import com.exp.medic.repository.paciente.PacienteRepository;
+import com.exp.medic.repository.recetas.RecetaMedicaRepository;
 import com.exp.medic.service.paciente.IPacienteCrudService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,8 @@ public class PacienteCrudServiceImpl implements IPacienteCrudService {
 
     private final PacienteRepository pacienteRepository;
     private final IPacienteHelper iPacienteHelper;
+    private final HistoriaClinicaRepository historiaClinicaRepository;
+    private final RecetaMedicaRepository recetaMedicaRepository;
 
     @Override
     @Transactional
@@ -48,6 +52,10 @@ public class PacienteCrudServiceImpl implements IPacienteCrudService {
         if (!pacienteRepository.existsById(id)) {
             throw new RecursoNoEncontradoException("Paciente no encontrado con id: " + id);
         }
+
+        recetaMedicaRepository.deleteByPacienteId(id);
+        historiaClinicaRepository.deleteByPacienteId(id);
+
         pacienteRepository.deleteById(id);
     }
 
