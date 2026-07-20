@@ -14,6 +14,8 @@ public record PacienteResponseDTO(
         String email,
         String genero,
         String contactoEmergencia,
+        String medicoId,
+        String medicoNombre,
         LocalDateTime createdAt
 ) {
 }

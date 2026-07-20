@@ -2,12 +2,15 @@ package com.exp.medic.service.paciente.impl;
 
 import com.exp.medic.dto.paciente.request.PacienteDTO;
 import com.exp.medic.dto.paciente.response.PacienteResponseDTO;
+import com.exp.medic.exception.AccesoDenegadoException;
 import com.exp.medic.exception.RecursoNoEncontradoException;
 import com.exp.medic.helper.paciente.IPacienteHelper;
 import com.exp.medic.model.Paciente;
 import com.exp.medic.repository.historia.HistoriaClinicaRepository;
 import com.exp.medic.repository.paciente.PacienteRepository;
 import com.exp.medic.repository.recetas.RecetaMedicaRepository;
+import com.exp.medic.security.CurrentUser;
+import com.exp.medic.security.CurrentUserContext;
 import com.exp.medic.service.paciente.IPacienteCrudService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,15 @@ public class PacienteCrudServiceImpl implements IPacienteCrudService {
         Paciente entidad = new Paciente();
         mapearDtoAEntidad(dto, entidad);
 
+        // El paciente queda asociado a quien lo registra (normalmente el
+        // médico). No confiamos en nada que venga en el body para esto,
+        // solo en la identidad que ya validamos del JWT.
+        CurrentUser usuarioActual = CurrentUserContext.get();
+        if (usuarioActual != null) {
+            entidad.setMedicoId(usuarioActual.id());
+            entidad.setMedicoNombre(usuarioActual.nombreCompleto());
+        }
+
         Paciente guardado = pacienteRepository.save(entidad);
         return iPacienteHelper.mapearEntidadADto(guardado);
     }
@@ -40,7 +52,12 @@ public class PacienteCrudServiceImpl implements IPacienteCrudService {
         Paciente entidad = pacienteRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado con id: " + id));
 
+        verificarAccesoAlPaciente(entidad);
+
         mapearDtoAEntidad(dto, entidad);
+        // El médico tratante no se toca en una actualización de datos
+        // generales; si algún día quieres reasignar pacientes, eso debería
+        // ser una acción explícita aparte, no un efecto secundario del PUT.
 
         Paciente actualizado = pacienteRepository.save(entidad);
         return iPacienteHelper.mapearEntidadADto(actualizado);
@@ -49,9 +66,10 @@ public class PacienteCrudServiceImpl implements IPacienteCrudService {
     @Override
     @Transactional
     public void eliminar(Long id) {
-        if (!pacienteRepository.existsById(id)) {
-            throw new RecursoNoEncontradoException("Paciente no encontrado con id: " + id);
-        }
+        Paciente entidad = pacienteRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado con id: " + id));
+
+        verificarAccesoAlPaciente(entidad);
 
         recetaMedicaRepository.deleteByPacienteId(id);
         historiaClinicaRepository.deleteByPacienteId(id);
@@ -62,8 +80,13 @@ public class PacienteCrudServiceImpl implements IPacienteCrudService {
     @Override
     @Transactional(readOnly = true)
     public List<PacienteResponseDTO> listarTodos() {
-        return pacienteRepository.findAll()
-                .stream()
+        CurrentUser usuarioActual = CurrentUserContext.get();
+
+        List<Paciente> pacientes = (usuarioActual != null && usuarioActual.esMedico())
+                ? pacienteRepository.findByMedicoId(usuarioActual.id())
+                : pacienteRepository.findAll();
+
+        return pacientes.stream()
                 .map(iPacienteHelper::mapearEntidadADto)
                 .toList();
     }
@@ -73,7 +96,27 @@ public class PacienteCrudServiceImpl implements IPacienteCrudService {
     public PacienteResponseDTO obtenerPorId(Long id) {
         Paciente entidad = pacienteRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado con id: " + id));
+
+        verificarAccesoAlPaciente(entidad);
+
         return iPacienteHelper.mapearEntidadADto(entidad);
+    }
+
+    /**
+     * Un MEDICO solo puede ver/editar/eliminar a sus propios pacientes.
+     * ADMIN, RECEPCION y ENFERMERA no se restringen aquí (front desk y
+     * administración necesitan ver a todos).
+     */
+    private void verificarAccesoAlPaciente(Paciente entidad) {
+        CurrentUser usuarioActual = CurrentUserContext.get();
+        if (usuarioActual == null || !usuarioActual.esMedico()) {
+            return;
+        }
+
+        boolean esSuPaciente = usuarioActual.id().equals(entidad.getMedicoId());
+        if (!esSuPaciente) {
+            throw new AccesoDenegadoException("Este paciente no está asignado a tu usuario.");
+        }
     }
 
     private void mapearDtoAEntidad(PacienteDTO dto, Paciente entidad) {

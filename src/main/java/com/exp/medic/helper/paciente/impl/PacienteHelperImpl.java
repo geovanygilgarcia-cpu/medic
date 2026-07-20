@@ -24,6 +24,8 @@ public class PacienteHelperImpl implements IPacienteHelper {
                 entidad.getEmail(),
                 entidad.getGenero(),
                 entidad.getContactoEmergencia(),
+                entidad.getMedicoId(),
+                entidad.getMedicoNombre(),
                 entidad.getCreatedAt()
         );
     }

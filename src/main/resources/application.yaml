@@ -16,3 +16,9 @@ spring:
 
 server:
   port: ${PORT:8080}
+
+app:
+  jwt:
+    # DEBE ser el mismo secreto que usa el auth-service (app.jwt.secret allá).
+    # Si no coinciden, este servicio va a rechazar TODOS los tokens.
+    secret: ${APP_JWT_SECRET}

@@ -40,6 +40,17 @@ public class Paciente {
     @Column(name = "contacto_emergencia", length = 200)
     private String contactoEmergencia;
 
+    // Id del Usuario (rol MEDICO) del auth-service que dio de alta al
+    // paciente. No es una FK real -> son bases de datos/servicios distintos,
+    // solo guardamos el UUID como texto (igual que su id allá).
+    @Column(name = "medico_id", length = 36)
+    private String medicoId;
+
+    // Denormalizado a propósito: así el listado de pacientes no necesita ir
+    // a preguntarle al auth-service el nombre del doctor por cada fila.
+    @Column(name = "medico_nombre", length = 255)
+    private String medicoNombre;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 }
