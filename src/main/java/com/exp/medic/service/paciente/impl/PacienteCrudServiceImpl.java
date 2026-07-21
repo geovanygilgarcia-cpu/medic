@@ -9,6 +9,7 @@ import com.exp.medic.model.Paciente;
 import com.exp.medic.repository.historia.HistoriaClinicaRepository;
 import com.exp.medic.repository.paciente.PacienteRepository;
 import com.exp.medic.repository.recetas.RecetaMedicaRepository;
+import com.exp.medic.repository.referencia.ReferenciaRepository;
 import com.exp.medic.security.CurrentUser;
 import com.exp.medic.security.CurrentUserContext;
 import com.exp.medic.service.paciente.IPacienteCrudService;
@@ -26,6 +27,7 @@ public class PacienteCrudServiceImpl implements IPacienteCrudService {
     private final IPacienteHelper iPacienteHelper;
     private final HistoriaClinicaRepository historiaClinicaRepository;
     private final RecetaMedicaRepository recetaMedicaRepository;
+    private final ReferenciaRepository referenciaRepository;
 
     @Override
     @Transactional
@@ -73,6 +75,9 @@ public class PacienteCrudServiceImpl implements IPacienteCrudService {
 
         recetaMedicaRepository.deleteByPacienteId(id);
         historiaClinicaRepository.deleteByPacienteId(id);
+        // Sin esto, el DELETE del paciente truena por la llave foránea
+        // referencias_paciente_id_fkey si alguna vez fue referido/aceptado.
+        referenciaRepository.deleteByPacienteId(id);
 
         pacienteRepository.deleteById(id);
     }
